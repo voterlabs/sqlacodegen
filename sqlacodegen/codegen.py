@@ -332,7 +332,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False,
                  noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable, class_model=ModelClass,
-                 template=None, audited=None, audit_all=False):
+                 template=None, audited=None, audit_all=False, user_model_name='User', role_model_name='Role'):
         super(CodeGenerator, self).__init__()
         if audited is None:
             audited = {}
@@ -352,6 +352,8 @@ class CodeGenerator(object):
         self.ignored_tables = ignored_tables
         self.table_model = table_model
         self.class_model = class_model
+        self.user_model_name = user_model_name
+        self.role_model_name = role_model_name
         if template:
             self.template = template
         self.inflect_engine = self.create_inflect_engine()
@@ -625,9 +627,9 @@ class CodeGenerator(object):
         return rendered.rstrip('\n,') + '\n)\n'
 
     def render_class(self, model):
-        if model.name == 'User':
+        if model.name == self.user_model_name:
             rendered = 'class {0}({1}, {2}):\n'.format(model.name, model.parent_name, 'UserMixin')
-        elif model.name == 'Role':
+        elif model.name == self.role_model_name:
             rendered = 'class {0}({1}, {2}):\n'.format(model.name, model.parent_name, 'RoleMixin')
         else:
             rendered = 'class {0}({1}):\n'.format(model.name, model.parent_name)
@@ -668,8 +670,10 @@ class CodeGenerator(object):
 
         # Mapper args
         mapper_kwargs = {}
-        if model.name == 'User':
+        if model.name == self.user_model_name:
             mapper_kwargs['polymorphic_on'] = 'type'
+        elif model.parent_name == self.user_model_name:
+            mapper_kwargs['polymorphic_identity'] = model.name
 
         kwargs_items = _get_kwargs_repr(mapper_kwargs)
         if mapper_kwargs:
