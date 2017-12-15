@@ -332,7 +332,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False,
                  noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable, class_model=ModelClass,
-                 template=None, audited=None, audit_all=False, user_model_name='User', role_model_name='Role'):
+                 template=None, audited=None, audit_all=False, user_model_name='User', role_model_name='Role', product_model_name='Product'):
         super(CodeGenerator, self).__init__()
         if audited is None:
             audited = {}
@@ -354,6 +354,7 @@ class CodeGenerator(object):
         self.class_model = class_model
         self.user_model_name = user_model_name
         self.role_model_name = role_model_name
+        self.product_model_name = product_model_name
         if template:
             self.template = template
         self.inflect_engine = self.create_inflect_engine()
@@ -673,6 +674,10 @@ class CodeGenerator(object):
         if model.name == self.user_model_name:
             mapper_kwargs['polymorphic_on'] = 'type'
         elif model.parent_name == self.user_model_name:
+            mapper_kwargs['polymorphic_identity'] = model.name
+        elif model.name == self.product_model_name:
+            mapper_kwargs['polymorphic_on'] = 'product_type'
+        elif model.parent_name == self.product_model_name:
             mapper_kwargs['polymorphic_identity'] = model.name
 
         kwargs_items = _get_kwargs_repr(mapper_kwargs)
