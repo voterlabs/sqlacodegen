@@ -332,8 +332,9 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False,
                  noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable, class_model=ModelClass,
-                 template=None, audited=None, audit_all=False, user_model_name='User', role_model_name='Role', product_model_name='Product'):
+                 template=None, audited=None, audit_all=False, user_model_name='User', role_model_name='Role', product_model_name='Product', force_relationship={}):
         super(CodeGenerator, self).__init__()
+        self.force_relationship = force_relationship
         if audited is None:
             audited = {}
         if audit_all:
@@ -437,26 +438,12 @@ class CodeGenerator(object):
                     back_populate = {'user_role'}
                 else:
                     back_populate = {}
-
-                if table.name == 'deal':
-                    backrefs = [('Customer', 'deals')]
-                elif table.name == 'customer_need':
-                    backrefs = [('Deal', 'customer_need')]
-                elif table.name in {'customer_string', 'customer_flag', 'customer_float', 'customer_int'}:
-                    backrefs = [('Customer', '{}s'.format(table.name.split('_')[1]))]
-                else:
-                    backrefs = ()
-
-                model = self.class_model(table,
-                                         links[table.name],
-                                         self.inflect_engine,
-                                         not nojoined,
-                                         back_populate,
-                                         backrefs)
+                model = self.class_model(table, links[table.name], self.inflect_engine, not nojoined, back_populate)
                 classes[model.name] = model
 
             self.models.append(model)
             model.add_imports(self.collector)
+
 
         # Nest inherited classes in their superclasses to ensure proper ordering
         for model in classes.values():
@@ -628,6 +615,12 @@ class CodeGenerator(object):
         return rendered.rstrip('\n,') + '\n)\n'
 
     def render_class(self, model):
+        if model.name in self.force_relationship:
+            relations = self.force_relationship[model.name]
+            parent =  model.name
+            for relation in relations:
+                relationship_ = Relationship(parent, relation['child'])
+                model._add_attribute(relation['name'], relationship_)
         if model.name == self.user_model_name:
             rendered = 'class {0}({1}, {2}):\n'.format(model.name, model.parent_name, 'UserMixin')
         elif model.name == self.role_model_name:

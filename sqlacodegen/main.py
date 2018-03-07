@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--outfile', help='file to write output to (default: stdout)')
     parser.add_argument('--audited', help='comma separated list of audited table names')
     parser.add_argument('--auditall', action='store_true', help='audit all tables')
+    parser.add_argument('--relationship', action='append', nargs=3, metavar=('parent', 'child', 'name'), help='Creates an association with the specified name')
     args = parser.parse_args()
 
     if args.version:
@@ -38,7 +39,16 @@ def main():
         print('You must supply a url\n', file=sys.stderr)
         parser.print_help()
         return
-
+    _relationship = dict()
+    for rel in args.relationship:
+        key = rel[0]
+        val = { 'child' : rel[1]
+              ,'name' : rel[2]
+              }
+        if not (key in _relationship):
+            _relationship[key] = []
+        _relationship[key].append(val)
+    args.relationship = _relationship
     engine = create_engine(args.url)
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
@@ -51,7 +61,8 @@ def main():
                                   args.nojoined,
                                   args.noinflect,
                                   args.noclasses,
-                                  audit_all=args.auditall)
+                                  audit_all=args.auditall,
+                                  force_relationship=args.relationship)
     elif args.audited:
         generator = CodeGenerator(metadata,
                                   args.noindexes,
@@ -59,12 +70,14 @@ def main():
                                   args.nojoined,
                                   args.noinflect,
                                   args.noclasses,
-                                  audited=set(args.audited.split(',')))
+                                  audited=set(args.audited.split(',')),
+                                  force_relationship=args.relationship)
     else:
         generator = CodeGenerator(metadata,
                                   args.noindexes,
                                   args.noconstraints,
                                   args.nojoined,
                                   args.noinflect,
-                                  args.noclasses)
+                                  args.noclasses,
+                                  force_relationship=args.relationship)
     generator.render(outfile)
