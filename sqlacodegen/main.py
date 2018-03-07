@@ -39,9 +39,16 @@ def main():
         print('You must supply a url\n', file=sys.stderr)
         parser.print_help()
         return
-    args.relationship = dict([ (rel[0], { 'child' : rel[1]
-                                        , 'name' : rel[2]
-                                        } ) for rel in args.relationship])
+    _relationship = dict()
+    for rel in args.relationship:
+        key = rel[0]
+        val = { 'child' : rel[1]
+              ,'name' : rel[2]
+              }
+        if not (key in _relationship):
+            _relationship[key] = []
+        _relationship[key].append(val)
+    args.relationship = _relationship
     engine = create_engine(args.url)
     metadata = MetaData(engine)
     tables = args.tables.split(',') if args.tables else None
