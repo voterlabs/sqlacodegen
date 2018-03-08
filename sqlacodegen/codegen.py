@@ -382,6 +382,7 @@ class CodeGenerator(object):
 
         if self.audit_all or self.audited:
             self.collector.add_literal_import('sqlalchemy_continuum', 'make_versioned')
+            self.collector.add_literal_import('sqlalchemy_continuum.plugins', 'FlaskPlugin')
             self.collector.add_literal_import('sqlalchemy.orm','configure_mappers')
 
         self.collector.add_literal_import('flask_security', 'UserMixin')
@@ -706,7 +707,7 @@ class CodeGenerator(object):
                 rendered_models.append(self.render_table(model))
 
         output = self.template.format(imports=self.render_imports(),
-                                      make_versioned_call='make_versioned(user_cls=None)' if self.audit_all or self.audited else '',
+                                      make_versioned_call='make_versioned(plugins=[FlaskPlugin()])' if self.audit_all or self.audited else '',
                                       configure_mappers_call='configure_mappers()' if self.audit_all or self.audited else '',
                                       metadata_declarations=self.render_metadata_declarations(),
                                       models=self.model_separator.join(rendered_models).rstrip('\n'))
