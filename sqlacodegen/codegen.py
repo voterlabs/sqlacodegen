@@ -199,10 +199,7 @@ class ModelClass(Model):
     @staticmethod
     def _tablename_to_classname(tablename, inflect_engine):
         camel_case_name = ''.join(part[:1].upper() + part[1:] for part in tablename.split('_'))
-        # sqlacodegen source is: inflect_engine.singular_noun(camel_case_name) or camel_case_name
-        # However, due to an open bug in 'inflect' (https://github.com/jazzband/inflect/issues/46)
-        # The input 'Address' was returned 'Addres', and thus we opted to drop the 'singular_noun' functionality
-        return camel_case_name
+        return inflect_engine.singular_noun(camel_case_name) or camel_case_name
 
     @staticmethod
     def _convert_to_valid_identifier(name):
