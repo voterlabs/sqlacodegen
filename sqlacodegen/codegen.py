@@ -332,7 +332,7 @@ class CodeGenerator(object):
     def __init__(self, metadata, noindexes=False, noconstraints=False, nojoined=False, noinflect=False,
                  noclasses=False, indentation='    ', model_separator='\n\n',
                  ignored_tables=('alembic_version', 'migrate_version'), table_model=ModelTable, class_model=ModelClass,
-                 template=None, audited=None, audit_all=False, user_model_name='User', role_model_name='Role', product_model_name='Product', force_relationship={}):
+                 template=None, audited=None, audit_all=False, force_relationship={}):
         super(CodeGenerator, self).__init__()
         self.force_relationship = force_relationship
         if audited is None:
@@ -353,9 +353,6 @@ class CodeGenerator(object):
         self.ignored_tables = ignored_tables
         self.table_model = table_model
         self.class_model = class_model
-        self.user_model_name = user_model_name
-        self.role_model_name = role_model_name
-        self.product_model_name = product_model_name
         if template:
             self.template = template
         self.inflect_engine = self.create_inflect_engine()
@@ -384,9 +381,6 @@ class CodeGenerator(object):
             self.collector.add_literal_import('sqlalchemy_continuum', 'make_versioned')
             self.collector.add_literal_import('sqlalchemy_continuum.plugins', 'FlaskPlugin')
             self.collector.add_literal_import('sqlalchemy.orm','configure_mappers')
-
-        self.collector.add_literal_import('flask_security', 'UserMixin')
-        self.collector.add_literal_import('flask_security', 'RoleMixin')
 
         classes = {}
         for table in sorted(metadata.tables.values(), key=lambda t: (t.schema or '', t.name)):
@@ -622,12 +616,7 @@ class CodeGenerator(object):
             for relation in relations:
                 relationship_ = Relationship(parent, relation['child'])
                 model._add_attribute(relation['name'], relationship_)
-        if model.name == self.user_model_name:
-            rendered = 'class {0}({1}, {2}):\n'.format(model.name, model.parent_name, 'UserMixin')
-        elif model.name == self.role_model_name:
-            rendered = 'class {0}({1}, {2}):\n'.format(model.name, model.parent_name, 'RoleMixin')
-        else:
-            rendered = 'class {0}({1}):\n'.format(model.name, model.parent_name)
+        rendered = 'class {0}({1}):\n'.format(model.name, model.parent_name)
         if self.audit_all or model.table.name in self.audited:
             rendered += '{0}__versioned__ = {1}\n'.format(self.indentation, '{}')
         rendered += '{0}__tablename__ = {1!r}\n'.format(self.indentation, model.table.name)
@@ -662,21 +651,6 @@ class CodeGenerator(object):
                 table_args[0] += ','
             table_args_joined = ',\n{0}{0}'.format(self.indentation).join(table_args)
             rendered += '{0}__table_args__ = (\n{0}{0}{1}\n{0})\n'.format(self.indentation, table_args_joined)
-
-        # Mapper args
-        mapper_kwargs = {}
-        if model.name == self.user_model_name:
-            mapper_kwargs['polymorphic_on'] = 'type'
-        elif model.parent_name == self.user_model_name:
-            mapper_kwargs['polymorphic_identity'] = model.name
-        elif model.name == self.product_model_name:
-            mapper_kwargs['polymorphic_on'] = 'product_type'
-        elif model.parent_name == self.product_model_name:
-            mapper_kwargs['polymorphic_identity'] = model.name
-
-        kwargs_items = _get_kwargs_repr(mapper_kwargs)
-        if mapper_kwargs:
-            rendered += '{0}__mapper_args__ = {1}'.format(self.indentation, kwargs_items)
 
         # Render columns
         rendered += '\n'
